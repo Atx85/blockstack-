@@ -12,10 +12,10 @@ public class Tetris
   public int blockTop = 0;
   public bool exit = false;
   bool canDraw = true;
-  bool hasCollision = false;
-  bool[] nextBlock;
-  bool[] prevBlock;
   Random rng;
+
+  enum CollisionType {Wall, Cell, Floor};
+  CollisionType collisionType;
 
   void NewBlock()
   {
@@ -51,7 +51,7 @@ public class Tetris
       for (int x = 0; x < blockW; x++)
       {
         if (blocks[activeBlockId][rotationId][x, y])
-          putText(x + blockLeft, y + blockTop, c);
+          putText(x + blockLeft + offsetLeft, y + blockTop + offsetTop, c);
       }
     }
   }
@@ -75,14 +75,24 @@ public class Tetris
         int mapX = blockLeft + x;
         int mapY = blockTop + y;
 
-        if (mapX < 0 || mapX >= tW || mapY < 0 || mapY >= tH)
+        if (mapX < 0 || mapX > tW)
         {
+          collisionType = CollisionType.Wall;
           return true;
         }
+
+        // if (mapX < 0 || mapX > tW || mapY < 0 || mapY >= tH)
+        if (mapY >= tH)
+        {
+          collisionType = CollisionType.Floor;
+          return true;
+        }
+
 
         int i = tW * mapY + mapX;
         if (tMap[i])
         {
+          collisionType = CollisionType.Cell;
           return true;
         }
       }
@@ -123,7 +133,10 @@ public class Tetris
       putText(offsetLeft + tW, offsetTop + i, "|");
     }
     DrawBlock();
-    if (Collision()) NextBlock();
+    if (Collision() 
+          && (collisionType == CollisionType.Cell
+                || collisionType == CollisionType.Floor)
+        ) NextBlock();
     // map
     for (int i = 0; i < tMap.Length; i++)
     {
@@ -135,7 +148,9 @@ public class Tetris
     }
 
 // score
-    putText(15, 0, $"{blockTop} {blockLeft} {rotationId}");
+    putText(15, 0, $"blockTop: {blockTop} blockLeft: {blockLeft} rotId: {rotationId}");
+    putText(15, 1, $"tW: {tW} tH: {tH} offsetTop: {offsetTop} offsetLeft: {offsetLeft}");
+    putText(15, 2, $"ColType: {collisionType} Collision: {Collision()}");
     canDraw = false;
   }
 
@@ -149,7 +164,7 @@ public class Tetris
 
   public void MoveBlock()
   {
-    if (tH + offsetTop - blockH > blockTop)
+    if (tH - blockH > blockTop)
     {
       blockTop++;
     }
@@ -163,18 +178,17 @@ public class Tetris
 
       if (key.Key == ConsoleKey.A)
       {
-        blockLeft = Math.Max(offsetLeft + 1, blockLeft - 1);
+        blockLeft = Math.Max(0, blockLeft - 1);
       }
       if (key.Key == ConsoleKey.D)
       {
-        int maxLeft = offsetLeft + tW - blockW;
-        blockLeft = Math.Min(maxLeft, blockLeft + 1);
+        blockLeft = blockLeft + 1;
+        if (Collision() && collisionType == CollisionType.Wall) blockLeft -= 1;
       }
       if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.Spacebar)
       {
         rotationId = (rotationId + 1) % blocks[activeBlockId].Count;
       }
-
       canDraw = true;
     }
   }
@@ -186,6 +200,20 @@ public class Tetris
     blocks = TetrisBlocks.Create();
   }
 
+}
+
+class TetrisRenderer
+{
+  Tetris tetris;
+  public TetrisRenderer(Tetris t)
+  {
+    tetris = t;
+  }
+
+  public void Draw()
+  {
+
+  }
 }
 
 class Program

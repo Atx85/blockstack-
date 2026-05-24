@@ -74,6 +74,7 @@ public class Tetris
 
         int mapX = blockLeft + x;
         int mapY = blockTop + y;
+        putText(15, 4, $"mapX {mapX} mapY {mapY} offsetLeft {offsetLeft}");
 
         if (mapX < 0 || mapX > tW)
         {
@@ -127,10 +128,14 @@ public class Tetris
     if (!canDraw) return;
     Console.Clear(); // this could be more specific to reduce blinking
     // frame
-    for (int i = 0; i < tH; i++)
+    for (int i = -1; i < tH; i++)
     {
-      putText(offsetLeft, offsetTop + i, "|");
-      putText(offsetLeft + tW, offsetTop + i, "|");
+      putText(offsetLeft , offsetTop + i, "║");
+      putText(offsetLeft + tW + 1, offsetTop + i, "║");
+    }
+    for (int i = 0; i < tW; i++)
+    {
+      putText(offsetLeft + i + 1, offsetTop + tH, i + "");
     }
     DrawBlock();
     if (Collision() 
@@ -178,7 +183,8 @@ public class Tetris
 
       if (key.Key == ConsoleKey.A)
       {
-        blockLeft = Math.Max(0, blockLeft - 1);
+        blockLeft = blockLeft - 1;
+        if (Collision() && collisionType == CollisionType.Wall) blockLeft += 1;
       }
       if (key.Key == ConsoleKey.D)
       {

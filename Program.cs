@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 
-public class Tetris
+public partial class Tetris
 {
   List<List<bool[,]>> blocks;
+  TetrisRenderer renderer;
   int tH = 10, tW = 10, offsetLeft = 2, offsetTop = 4;
   bool[] tMap;
   int rotationId = 0, activeBlockId = 0;
@@ -16,7 +16,7 @@ public class Tetris
   Random rng;
   bool debug = false; // this is the flag to show debug
 
-  enum CollisionType {Wall, Cell, Floor};
+  enum CollisionType { Wall, Cell, Floor };
   CollisionType collisionType;
   string[,] collisionMatrix = new string[0, 0];
 
@@ -28,7 +28,7 @@ public class Tetris
     blockLeft = (tW / 2) - 1; // or center based on block width
   }
 
-  // Next block will convert the 2d block into 1d for the map and store it in an 
+  // Next block will convert the 2d block into 1d for the map and store it in an
   // array which will help to figure out collisions and should simplify drawing
   void NextBlock()
   {
@@ -45,20 +45,6 @@ public class Tetris
     NewBlock();
     return;
   }
-  void DrawBlock(string c = "x")
-  {
-    blockH = blocks[activeBlockId][rotationId].GetLength(0);
-    blockW = blocks[activeBlockId][rotationId].GetLength(1);
-    for (int y = 0; y < blockH; y++)
-    {
-      for (int x = 0; x < blockW; x++)
-      {
-        if (blocks[activeBlockId][rotationId][y, x])
-          putText(x + blockLeft + offsetLeft, y + blockTop + offsetTop, c);
-      }
-    }
-  }
-
 
   bool Collision()
   {
@@ -95,7 +81,7 @@ public class Tetris
           continue;
         }
 
-        if (mapY >= tH) 
+        if (mapY >= tH)
         {
           collisionMatrix[y, x] = "X";
           hasCollision = true;
@@ -129,8 +115,6 @@ public class Tetris
     return hasCollision;
   }
 
-
-
   void MapPutAtXY(int x, int y, bool val = true)
   {
     int i = tW * y + x;
@@ -145,78 +129,12 @@ public class Tetris
     }
   }
 
-
-  (int x, int y) MapIToXY(int i)
-      => (i % tW, i / tW);
-
-
-  public void DrawDebug()
-  {
-    putText(17, 0, $"blockTop: {blockTop} blockLeft: {blockLeft} rotId: {rotationId} canDraw {canDraw}");
-    putText(17, 1, $"tW: {tW} tH: {tH} offsetTop: {offsetTop} offsetLeft: {offsetLeft}");
-    putText(17, 2, $"ColType: {collisionType} Collision: {Collision()}");
-    putText(17, 4, "Matrix: .=empty o=test X=hit");
-    
-    for (int y = 0; y < blockH; y++)
-    {
-      string row = "";
-      for (int x = 0; x < blockW; x++)
-      {
-        row += collisionMatrix[y, x];
-      }
-      putText(17, 5 + y, row);
-    }
-     for (int i = 0; i < tW; i++)
-    {
-      putText(offsetLeft + i + 1, offsetTop + tH, i + "");
-    }
-    for (int i = 0; i < tH; i++)
-    {
-      putText(offsetLeft + tW + 2, offsetTop + i, $"{i}");
-    }
-  
-  }
-
-  public void Draw()
-  {
-    if (!canDraw) return;
-    Console.Clear(); // this could be more specific to reduce blinking
-    // frame
-    for (int i = 0; i < tH; i++)
-    {
-      putText(offsetLeft , offsetTop + i, "║");
-      putText(offsetLeft + tW + 1, offsetTop + i, $"║");
-    }
-        
-    DrawBlock();
-    // map
-    for (int i = 0; i < tMap.Length; i++)
-    {
-      if (tMap[i])
-      {
-        var (x, y) = MapIToXY(i);
-        putText(x + offsetLeft, y + offsetTop, "o");
-      }
-    }
-    if (debug) DrawDebug();
-// score
-  
-    canDraw = false;
-  }
-
-  void putText(int x, int y, string txt)
-  {
-    if (x < 0 || y < 0) return;
-    if (x >= Console.BufferWidth || y >= Console.BufferHeight) return;
-    Console.SetCursorPosition(x, y);
-    Console.Write(txt);
-  }
-
   public void MoveBlock()
   {
     blockTop++;
     canDraw = true;
   }
+
   public void HandleInput()
   {
     if (Console.KeyAvailable)
@@ -264,8 +182,8 @@ public class Tetris
        && (collisionType == CollisionType.Cell
              || collisionType == CollisionType.Floor)
      );
-     blockTop -= 1;
-     return check;
+    blockTop -= 1;
+    return check;
   }
 
   void CheckProgress()
@@ -282,6 +200,7 @@ public class Tetris
     rng = new Random();
     tMap = new bool[tH * tW];
     blocks = TetrisBlocks.Create();
+    renderer = new TetrisRenderer(this);
   }
 
   public void Run()
@@ -292,24 +211,9 @@ public class Tetris
       // CheckProgress();
       if (WillReachBottom()) NextBlock();
       else MoveBlock(); // if this happens before check, check can reverse it
-      Draw();
+      renderer.Draw();
       Thread.Sleep(200);
     }
-  }
-
-}
-
-class TetrisRenderer
-{
-  Tetris tetris;
-  public TetrisRenderer(Tetris t)
-  {
-    tetris = t;
-  }
-
-  public void Draw()
-  {
-
   }
 }
 

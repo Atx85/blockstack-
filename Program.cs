@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 public class Tetris
@@ -13,9 +14,11 @@ public class Tetris
   public bool exit = false;
   bool canDraw = true;
   Random rng;
+  bool debug = false; // this is the flag to show debug
 
   enum CollisionType {Wall, Cell, Floor};
   CollisionType collisionType;
+  string[,] collisionMatrix = new string[0, 0];
 
   void NewBlock()
   {
@@ -35,7 +38,7 @@ public class Tetris
     {
       for (int x = 0; x < blockW; x++)
       {
-        if (blocks[activeBlockId][rotationId][x, y])
+        if (blocks[activeBlockId][rotationId][y, x])
           MapPutAtXY(x + blockLeft, y + blockTop);
       }
     }
@@ -50,7 +53,7 @@ public class Tetris
     {
       for (int x = 0; x < blockW; x++)
       {
-        if (blocks[activeBlockId][rotationId][x, y])
+        if (blocks[activeBlockId][rotationId][y, x])
           putText(x + blockLeft + offsetLeft, y + blockTop + offsetTop, c);
       }
     }
@@ -62,6 +65,9 @@ public class Tetris
     var shape = blocks[activeBlockId][rotationId];
     blockH = shape.GetLength(0);
     blockW = shape.GetLength(1);
+    collisionMatrix = new string[blockH, blockW];
+    bool hasCollision = false;
+    bool collisionTypeSet = false;
 
     for (int y = 0; y < blockH; y++)
     {
@@ -69,36 +75,58 @@ public class Tetris
       {
         if (!shape[y, x])
         {
+          collisionMatrix[y, x] = ".";
           continue;
         }
+        collisionMatrix[y, x] = $"[{x + blockLeft} : {y + blockTop}] ";
 
         int mapX = blockLeft + x;
         int mapY = blockTop + y;
-        putText(15, 4, $"mapX {mapX} mapY {mapY} offsetLeft {offsetLeft}");
 
-        if (mapX < 0 || mapX > tW)
+        if (mapX <= 0 || mapX >= tW)
         {
-          collisionType = CollisionType.Wall;
-          return true;
+          collisionMatrix[y, x] = "X";
+          hasCollision = true;
+          if (!collisionTypeSet)
+          {
+            collisionType = CollisionType.Wall;
+            collisionTypeSet = true;
+          }
+          continue;
         }
 
-        // if (mapX < 0 || mapX > tW || mapY < 0 || mapY >= tH)
-        if (mapY >= tH)
+        if (mapY >= tH) 
         {
-          collisionType = CollisionType.Floor;
-          return true;
+          collisionMatrix[y, x] = "X";
+          hasCollision = true;
+          if (!collisionTypeSet)
+          {
+            collisionType = CollisionType.Floor;
+            collisionTypeSet = true;
+          }
+          continue;
+        }
+
+        if (mapY < 0)
+        {
+          continue;
         }
 
 
         int i = tW * mapY + mapX;
         if (tMap[i])
         {
-          collisionType = CollisionType.Cell;
-          return true;
+          collisionMatrix[y, x] = "X";
+          hasCollision = true;
+          if (!collisionTypeSet)
+          {
+            collisionType = CollisionType.Cell;
+            collisionTypeSet = true;
+          }
         }
       }
     }
-    return false;
+    return hasCollision;
   }
 
 
@@ -106,7 +134,7 @@ public class Tetris
   void MapPutAtXY(int x, int y, bool val = true)
   {
     int i = tW * y + x;
-    if (i < 0 || i > tMap.Length)
+    if (i < 0 || i >= tMap.Length)
     {
       // do nothing
       return;
@@ -122,26 +150,45 @@ public class Tetris
       => (i % tW, i / tW);
 
 
+  public void DrawDebug()
+  {
+    putText(17, 0, $"blockTop: {blockTop} blockLeft: {blockLeft} rotId: {rotationId} canDraw {canDraw}");
+    putText(17, 1, $"tW: {tW} tH: {tH} offsetTop: {offsetTop} offsetLeft: {offsetLeft}");
+    putText(17, 2, $"ColType: {collisionType} Collision: {Collision()}");
+    putText(17, 4, "Matrix: .=empty o=test X=hit");
+    
+    for (int y = 0; y < blockH; y++)
+    {
+      string row = "";
+      for (int x = 0; x < blockW; x++)
+      {
+        row += collisionMatrix[y, x];
+      }
+      putText(17, 5 + y, row);
+    }
+     for (int i = 0; i < tW; i++)
+    {
+      putText(offsetLeft + i + 1, offsetTop + tH, i + "");
+    }
+    for (int i = 0; i < tH; i++)
+    {
+      putText(offsetLeft + tW + 2, offsetTop + i, $"{i}");
+    }
+  
+  }
 
   public void Draw()
   {
     if (!canDraw) return;
     Console.Clear(); // this could be more specific to reduce blinking
     // frame
-    for (int i = -1; i < tH; i++)
+    for (int i = 0; i < tH; i++)
     {
       putText(offsetLeft , offsetTop + i, "║");
-      putText(offsetLeft + tW + 1, offsetTop + i, "║");
+      putText(offsetLeft + tW + 1, offsetTop + i, $"║");
     }
-    for (int i = 0; i < tW; i++)
-    {
-      putText(offsetLeft + i + 1, offsetTop + tH, i + "");
-    }
+        
     DrawBlock();
-    if (Collision() 
-          && (collisionType == CollisionType.Cell
-                || collisionType == CollisionType.Floor)
-        ) NextBlock();
     // map
     for (int i = 0; i < tMap.Length; i++)
     {
@@ -151,11 +198,9 @@ public class Tetris
         putText(x + offsetLeft, y + offsetTop, "o");
       }
     }
-
+    if (debug) DrawDebug();
 // score
-    putText(15, 0, $"blockTop: {blockTop} blockLeft: {blockLeft} rotId: {rotationId}");
-    putText(15, 1, $"tW: {tW} tH: {tH} offsetTop: {offsetTop} offsetLeft: {offsetLeft}");
-    putText(15, 2, $"ColType: {collisionType} Collision: {Collision()}");
+  
     canDraw = false;
   }
 
@@ -169,10 +214,7 @@ public class Tetris
 
   public void MoveBlock()
   {
-    if (tH - blockH > blockTop)
-    {
-      blockTop++;
-    }
+    blockTop++;
     canDraw = true;
   }
   public void HandleInput()
@@ -193,9 +235,45 @@ public class Tetris
       }
       if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.Spacebar)
       {
+        int prevRotId = rotationId;
         rotationId = (rotationId + 1) % blocks[activeBlockId].Count;
+        if (
+          Collision() && collisionType == CollisionType.Wall ||
+          Collision() && collisionType == CollisionType.Cell
+        )
+        {
+          rotationId = prevRotId;
+        }
       }
       canDraw = true;
+    }
+  }
+
+  bool HasReachedBottom()
+  {
+    return (Collision()
+       && (collisionType == CollisionType.Cell
+             || collisionType == CollisionType.Floor)
+     );
+  }
+
+  bool WillReachBottom()
+  {
+    blockTop += 1;
+    bool check = (Collision()
+       && (collisionType == CollisionType.Cell
+             || collisionType == CollisionType.Floor)
+     );
+     blockTop -= 1;
+     return check;
+  }
+
+  void CheckProgress()
+  {
+    if (HasReachedBottom())
+    {
+      // blockTop -= 1;
+      NextBlock();
     }
   }
 
@@ -204,6 +282,19 @@ public class Tetris
     rng = new Random();
     tMap = new bool[tH * tW];
     blocks = TetrisBlocks.Create();
+  }
+
+  public void Run()
+  {
+    while (!exit)
+    {
+      HandleInput();
+      // CheckProgress();
+      if (WillReachBottom()) NextBlock();
+      else MoveBlock(); // if this happens before check, check can reverse it
+      Draw();
+      Thread.Sleep(200);
+    }
   }
 
 }
@@ -227,12 +318,6 @@ class Program
   static void Main(string[] args)
   {
     Tetris t = new Tetris();
-    while (!t.exit)
-    {
-      t.HandleInput();
-      t.Draw();
-      Thread.Sleep(200);
-      t.MoveBlock();
-    }
+    t.Run();
   }
 }

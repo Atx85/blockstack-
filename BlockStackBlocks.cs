@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-public static class TetrisBlocks
+public static class BlockStackBlocks
 {
   public static List<List<bool[,]>> Create()
   {

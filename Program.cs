@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Threading;
 
-public partial class Tetris
+public partial class BlockStack
 {
   List<List<bool[,]>> blocks;
-  TetrisRenderer renderer;
+  BlockStackRenderer renderer;
   int tH = 10, tW = 10, offsetLeft = 2, offsetTop = 4;
   bool[] tMap;
   int rotationId = 0, activeBlockId = 0;
@@ -195,12 +195,12 @@ public partial class Tetris
     }
   }
 
-  public Tetris()
+  public BlockStack()
   {
     rng = new Random();
     tMap = new bool[tH * tW];
-    blocks = TetrisBlocks.Create();
-    renderer = new TetrisRenderer(this);
+    blocks = BlockStackBlocks.Create();
+    renderer = new BlockStackRenderer(this);
   }
 
   public void Run()
@@ -212,7 +212,7 @@ public partial class Tetris
       if (WillReachBottom()) NextBlock();
       else MoveBlock(); // if this happens before check, check can reverse it
       renderer.Draw();
-      Thread.Sleep(200);
+      Thread.Sleep(400);
     }
   }
 }
@@ -221,7 +221,7 @@ class Program
 {
   static void Main(string[] args)
   {
-    Tetris t = new Tetris();
-    t.Run();
+    BlockStack game = new BlockStack();
+    game.Run();
   }
 }

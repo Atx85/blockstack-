@@ -15,6 +15,7 @@ public partial class BlockStack
   bool canDraw = true;
   Random rng;
   bool debug = false; // this is the flag to show debug
+  const int fallDelayMs = 400;
 
   enum CollisionType { Wall, Cell, Floor };
   CollisionType collisionType;
@@ -26,6 +27,14 @@ public partial class BlockStack
     rotationId = 0;
     blockTop = 0;
     blockLeft = (tW / 2) - 1; // or center based on block width
+  }
+
+  void ClearInputBuffer()
+  {
+    while (Console.KeyAvailable)
+    {
+      Console.ReadKey(true);
+    }
   }
 
   // Next block will convert the 2d block into 1d for the map and store it in an
@@ -43,6 +52,7 @@ public partial class BlockStack
       }
     }
     NewBlock();
+    ClearInputBuffer();
     return;
   }
 
@@ -69,7 +79,7 @@ public partial class BlockStack
         int mapX = blockLeft + x;
         int mapY = blockTop + y;
 
-        if (mapX <= 0 || mapX >= tW)
+        if (mapX < 0 || mapX >= tW)
         {
           collisionMatrix[y, x] = "X";
           hasCollision = true;
@@ -137,7 +147,8 @@ public partial class BlockStack
 
   public void HandleInput()
   {
-    if (Console.KeyAvailable)
+    bool changed = false;
+    while (Console.KeyAvailable)
     {
       ConsoleKeyInfo key = Console.ReadKey(true);
 
@@ -145,13 +156,15 @@ public partial class BlockStack
       {
         blockLeft = blockLeft - 1;
         if (Collision() && collisionType == CollisionType.Wall) blockLeft += 1;
+        changed = true;
       }
-      if (key.Key == ConsoleKey.D)
+      else if (key.Key == ConsoleKey.D)
       {
         blockLeft = blockLeft + 1;
         if (Collision() && collisionType == CollisionType.Wall) blockLeft -= 1;
+        changed = true;
       }
-      if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.Spacebar)
+      else if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.Spacebar)
       {
         int prevRotId = rotationId;
         rotationId = (rotationId + 1) % blocks[activeBlockId].Count;
@@ -162,9 +175,11 @@ public partial class BlockStack
         {
           rotationId = prevRotId;
         }
+        changed = true;
       }
-      canDraw = true;
     }
+
+    if (changed) canDraw = true;
   }
 
   bool HasReachedBottom()
@@ -201,18 +216,60 @@ public partial class BlockStack
     tMap = new bool[tH * tW];
     blocks = BlockStackBlocks.Create();
     renderer = new BlockStackRenderer(this);
+    Console.CursorVisible = false;
+  }
+
+  void CheckLines()
+  {
+    for (int y = tH - 1; y >= 0; y--)
+    {
+      bool full = true;
+      for (int x = 0; x < tW; x++)
+      {
+        if (!tMap[y * tW + x])
+        {
+          full = false;
+          break;
+        }
+      }
+
+      if (!full) continue;
+
+      for (int row = y; row > 0; row--)
+      {
+        for (int x = 0; x < tW; x++)
+        {
+          tMap[row * tW + x] = tMap[(row - 1) * tW + x];
+        }
+      }
+
+      for (int x = 0; x < tW; x++)
+      {
+        tMap[x] = false;
+      }
+
+      y++;
+      canDraw = true;
+    }
   }
 
   public void Run()
   {
+    DateTime lastFall = DateTime.UtcNow;
     while (!exit)
     {
       HandleInput();
-      // CheckProgress();
-      if (WillReachBottom()) NextBlock();
-      else MoveBlock(); // if this happens before check, check can reverse it
+      if ((DateTime.UtcNow - lastFall).TotalMilliseconds >= fallDelayMs)
+      {
+        lastFall = DateTime.UtcNow;
+        if (WillReachBottom()) {
+          NextBlock();
+          CheckLines();
+        }
+        else MoveBlock(); // if this happens before check, check can reverse it
+      }
       renderer.Draw();
-      Thread.Sleep(400);
+      Thread.Sleep(16);
     }
   }
 }

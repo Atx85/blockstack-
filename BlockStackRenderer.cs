@@ -31,7 +31,7 @@ public partial class BlockStack
         for (int x = 0; x < game.blockW; x++)
         {
           if (game.blocks[game.activeBlockId][game.rotationId][y, x])
-            PutText(x + game.blockLeft + game.offsetLeft, y + game.blockTop + game.offsetTop, c);
+            PutText(x + game.blockLeft + game.offsetLeft + 1, y + game.blockTop + game.offsetTop, c);
         }
       }
     }
@@ -80,7 +80,7 @@ public partial class BlockStack
         if (game.tMap[i])
         {
           var (x, y) = MapIToXY(i);
-          PutText(x + game.offsetLeft, y + game.offsetTop, "o");
+          PutText(x + game.offsetLeft + 1, y + game.offsetTop, "o");
         }
       }
 
